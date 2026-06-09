@@ -1,3 +1,5 @@
 flask
 gunicorn
 pypdf2
+numpy
+pandas
