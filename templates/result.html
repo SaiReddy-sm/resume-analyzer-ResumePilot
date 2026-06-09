@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Audit Results | ResumePilot</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f7ff',
+                            100: '#ebf0ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .score-circle {
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-300 relative overflow-x-hidden font-sans pb-20">
+
+    <!-- Global Jinja2 Safe Default Fallback Mechanism -->
+    {% if results is not defined or not results %}
+        {% set results = {
+            'score': 0,
+            'strength': 'Average',
+            'recommended_role': 'Not Specified',
+            'strength_technical': 70,
+            'strength_projects': 65,
+            'strength_structure': 80,
+            'strength_keywords': 60,
+            'summary': 'Executive analysis could not be generated.',
+            'skills_detected': [],
+            'skills_missing': [],
+            'recruiter_popup': none,
+            'suggestions': [],
+            'roadmap': [],
+            'career_matches': {}
+        } %}
+    {% endif %}
+
+    <!-- Background Blobs -->
+    <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-300 dark:bg-purple-900/30 rounded-full mix-blend-multiply filter blur-2xl opacity-40 pointer-events-none"></div>
+    <div class="absolute top-20 right-4 w-80 h-80 bg-brand-300 dark:bg-indigo-950/40 rounded-full mix-blend-multiply filter blur-2xl opacity-40 pointer-events-none"></div>
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-50 glass border-b border-white/10 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="/" class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md flex items-center justify-center hover:bg-brand-700 transition-all">
+                    <i class="fa-solid fa-house text-sm"></i>
+                </a>
+                <span class="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-indigo-500 dark:from-brand-500 dark:to-pink-500">ResumePilot Audit</span>
+            </div>
+
+            <!-- Actions (Theme + Back) -->
+            <div class="flex items-center space-x-4">
+                <button id="themeToggle" class="p-2.5 rounded-xl hover:bg-white/20 dark:hover:bg-slate-800/50 transition-colors text-slate-600 dark:text-slate-300" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon text-lg dark:hidden"></i>
+                    <i class="fa-solid fa-sun text-lg hidden dark:block"></i>
+                </button>
+                <a href="/" class="hidden sm:inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold text-xs hover:opacity-90 transition-all shadow-sm">
+                    <i class="fa-solid fa-arrow-left-long"></i>
+                    <span>Audit New CV</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Recruiter Popup Alert Block -->
+    {% if results.recruiter_popup is defined and results.recruiter_popup %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-20" id="recruiterAlert">
+        <div class="rounded-2xl p-6 glass border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl relative overflow-hidden transition-all duration-300 {% if results.recruiter_popup.type == 'error' %} border-rose-500/30 bg-rose-500/5 {% elif results.recruiter_popup.type == 'warning' %} border-amber-500/30 bg-amber-500/5 {% elif results.recruiter_popup.type == 'success' %} border-emerald-500/30 bg-emerald-500/5 {% else %} border-purple-500/30 bg-purple-500/5 {% endif %}">
+            
+            <!-- Alert decoration indicators -->
+            <div class="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
+                <i class="fa-solid fa-user-tie text-9xl"></i>
+            </div>
+
+            <div class="flex items-start space-x-4">
+                <div class="p-3.5 rounded-2xl flex items-center justify-center shrink-0 {% if results.recruiter_popup.type == 'error' %} bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 {% elif results.recruiter_popup.type == 'warning' %} bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 {% elif results.recruiter_popup.type == 'success' %} bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 {% else %} bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400 {% endif %}">
+                    <i class="fa-solid fa-user-ninja text-2xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-extrabold flex items-center gap-2">
+                        <span>{{ results.recruiter_popup.title | default('Recruiter Evaluation') }}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-bold uppercase {% if results.recruiter_popup.type == 'error' %} bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 {% elif results.recruiter_popup.type == 'warning' %} bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 {% elif results.recruiter_popup.type == 'success' %} bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 {% else %} bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 {% endif %}">
+                            recruiter review
+                        </span>
+                    </h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-4xl italic">
+                        "{{ results.recruiter_popup.message | default('No feedback text provided.') }}"
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('recruiterAlert').remove()" class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 transition-all shrink-0">
+                Dismiss Note
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Metrics Segment -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
+        
+        <!-- Left Panel: Dial Metrics + Key Details -->
+        <section class="lg:col-span-4 space-y-8">
+            
+            <!-- ATS Animated Progress Dials -->
+            <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl flex flex-col items-center text-center relative overflow-hidden">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">ATS Score Index</h3>
+                
+                <div class="relative w-48 h-48 my-6 flex items-center justify-center">
+                    <!-- SVG Circle container -->
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="50" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="10" class="dark:stroke-slate-800/40 stroke-slate-200"></circle>
+                        <circle cx="60" cy="60" r="50" fill="transparent" 
+                            stroke="url(#scoreGradient)" stroke-width="10" 
+                            stroke-linecap="round" stroke-dasharray="314.16"
+                            stroke-dashoffset="314.16" id="progressRing" class="score-circle"></circle>
+                        <defs>
+                            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366f1"></stop>
+                                <stop offset="100%" stop-color="#ec4899"></stop>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span class="text-5xl font-black tracking-tight" id="scoreDisplay">0</span>
+                        <span class="text-xs font-semibold uppercase tracking-widest text-slate-500 mt-1">rating</span>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Scores above 75 fall into the highly targetable sector for key SaaS talent platforms.
+                </p>
+            </div>
+
+            <!-- Resume Strength Meter Card -->
+            <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl space-y-6">
+                <h3 class="text-lg font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-square-poll-horizontal text-brand-500"></i>
+                    <span>Resume Strength Meter</span>
+                </h3>
+                
+                <div class="space-y-4">
+                    <!-- Technical Skills Bar -->
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-600 dark:text-slate-300">Technical Skills</span>
+                            <span class="text-brand-500 font-extrabold" id="techSkillsVal">{{ results.strength_technical | default(70) }}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out" id="techSkillsBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Projects Bar -->
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-600 dark:text-slate-300">Projects Quality</span>
+                            <span class="text-indigo-500 font-extrabold" id="projectsVal">{{ results.strength_projects | default(65) }}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out" id="projectsBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Structure Bar -->
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-600 dark:text-slate-300">Resume Structure</span>
+                            <span class="text-purple-500 font-extrabold" id="structureVal">{{ results.strength_structure | default(80) }}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000 ease-out" id="structureBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Keyword Optimization Bar -->
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-600 dark:text-slate-300">Keyword Optimization</span>
+                            <span class="text-pink-500 font-extrabold" id="keywordsVal">{{ results.strength_keywords | default(60) }}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full transition-all duration-1000 ease-out" id="keywordsBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommended Role & Strength (with Multi-Career Compatibility Spectrums) -->
+            <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl space-y-6">
+
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-extrabold flex items-center gap-2">
+                        <i class="fa-solid fa-user-tie text-brand-500"></i>
+                        <span>Career Match</span>
+                    </h3>
+
+                    {% set current_strength = results.strength | default('Average') %}
+                    {% if current_strength == "Excellent" %}
+                    <span class="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-500 text-xs font-bold">
+                        Excellent
+                    </span>
+                    {% elif current_strength == "Strong" %}
+                    <span class="px-3 py-1 rounded-xl bg-blue-500/10 text-blue-500 text-xs font-bold">
+                        Strong
+                    </span>
+                    {% elif current_strength == "Average" %}
+                    <span class="px-3 py-1 rounded-xl bg-amber-500/10 text-amber-500 text-xs font-bold">
+                        Average
+                    </span>
+                    {% else %}
+                    <span class="px-3 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold">
+                        Needs Improvement
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-4">
+
+                    <div class="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20">
+                        <p class="text-xs uppercase tracking-wider text-slate-500 mb-1">
+                            Recommended Role
+                        </p>
+                        <h4 class="text-xl font-black text-brand-500">
+                            {{ results.recommended_role | default('Not Specified') }}
+                        </h4>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-4 rounded-xl bg-white/10 border border-white/10">
+                            <p class="text-xs text-slate-500">
+                                ATS Score
+                            </p>
+                            <h4 class="text-2xl font-black">
+                                {{ results.score | default(0) }}
+                            </h4>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-white/10 border border-white/10">
+                            <p class="text-xs text-slate-500">
+                                Resume Strength
+                            </p>
+                            <h4 class="text-lg font-black leading-tight truncate">
+                                {{ results.strength | default('Average') }}
+                            </h4>
+                        </div>
+                    </div>
+
+                    <!-- Compatibility Spectrum Heat Map Progress Listing -->
+                    <div class="pt-4 border-t border-slate-200/50 dark:border-white/5 space-y-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Career Compatibility Spectrum
+                        </p>
+                        <div class="space-y-3">
+                            {% if results.career_matches is defined and results.career_matches %}
+                                {% for role, percentage in results.career_matches.items() %}
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
+                                            <span>{{ role }}</span>
+                                            <span class="font-extrabold text-brand-500">{{ percentage }}%</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <div class="h-full bg-gradient-to-r from-brand-500 to-pink-500 rounded-full transition-all duration-1000 ease-out career-bar" data-width="{{ percentage }}" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-xs text-slate-500 italic">No compatibility options computed.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Summary Details -->
+            <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl space-y-4">
+                <h3 class="text-lg font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-brand-500"></i>
+                    <span>Executive Analysis</span>
+                </h3>
+                <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                    {{ results.summary | default('No analysis details generated.') }}
+                </p>
+            </div>
+
+            <!-- Keyword Gaps Metrics (Detected vs Missing) -->
+            <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl space-y-6">
+                <h3 class="text-lg font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-tags text-brand-500"></i>
+                    <span>Industry Keywords</span>
+                </h3>
+
+                <!-- Detected Skills -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Detected Key skills</span>
+                        <span class="text-emerald-500">({{ (results.skills_detected | default([])) | length }})</span>
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                        {% if results.skills_detected is defined and results.skills_detected %}
+                            {% for skill in results.skills_detected %}
+                                <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center space-x-1.5">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                    <span>{{ skill }}</span>
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-xs text-slate-500 italic">No skills found.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Missing Skills Recommendations -->
+                <div class="space-y-3 pt-2 border-t border-white/5">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Target Gap Recommendations</span>
+                        <span class="text-pink-500">({{ (results.skills_missing | default([])) | length }})</span>
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                        {% if results.skills_missing is defined and results.skills_missing %}
+                            {% for skill in results.skills_missing %}
+                                <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-pink-500/10 border border-pink-500/20 text-pink-600 dark:text-pink-400 flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>{{ skill }}</span>
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-xs text-slate-500 italic">No missing skills.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Interactive 22-Parameter Checklist -->
+        <section class="lg:col-span-8 space-y-8">
+            <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl space-y-6">
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-xl font-extrabold">22-Point Diagnostics Checklist</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Review individual structural, contact, and formatting components</p>
+                    </div>
+                    
+                    <!-- Filters Container -->
+                    <div class="flex flex-wrap gap-1.5 bg-white/20 dark:bg-slate-900/50 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <button onclick="filterChecks('all')" id="btn-all" class="px-3 py-1.5 text-xs font-bold rounded-xl transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm">
+                            All
+                        </button>
+                        <button onclick="filterChecks('pass')" id="btn-pass" class="px-3 py-1.5 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:bg-white/30 dark:hover:bg-slate-800">
+                            Passed
+                        </button>
+                        <button onclick="filterChecks('warning')" id="btn-warning" class="px-3 py-1.5 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:bg-white/30 dark:hover:bg-slate-800">
+                            Warnings
+                        </button>
+                        <button onclick="filterChecks('fail')" id="btn-fail" class="px-3 py-1.5 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:bg-white/30 dark:hover:bg-slate-800">
+                            Failed
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Checks List mapping -->
+                <div class="divide-y divide-slate-200/50 dark:divide-white/5 space-y-0.5" id="checksList">
+                    {% if results.suggestions is defined and results.suggestions %}
+                        {% for check in results.suggestions %}
+                            <div class="check-item py-4 flex items-start justify-between gap-4 transition-all" data-status="{{ check.status | default('warning') }}">
+                                <div class="flex items-start space-x-3.5">
+                                    <!-- Diagnostic Status Icon wrapper -->
+                                    <span class="mt-1 shrink-0">
+                                        {% if check.status == 'pass' %}
+                                            <i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>
+                                        {% elif check.status == 'warning' %}
+                                            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-circle-xmark text-rose-500 text-lg"></i>
+                                        {% endif %}
+                                    </span>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                            <span>{{ check.name | default('Structural Metric Check') }}</span>
+                                            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border bg-white/20 dark:bg-slate-800/40 dark:border-white/5 text-slate-500 dark:text-slate-400">
+                                                {{ check.category | default('General') }}
+                                            </span>
+                                        </h4>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                            {{ check.message | default('Diagnostics analysis pending.') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Small Label status -->
+                                <span class="text-[10px] uppercase font-black tracking-widest shrink-0 mt-1 {% if check.status == 'pass' %} text-emerald-500 {% elif check.status == 'warning' %} text-amber-500 {% else %} text-rose-500 {% endif %}">
+                                    {{ check.status | default('warning') }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-12 text-center text-slate-500 italic text-sm">No checks completed.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Improvement Roadmap Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 relative z-10">
+        <div class="glass rounded-3xl p-8 border border-white/10 shadow-xl space-y-8">
+            <div>
+                <h3 class="text-xl font-extrabold flex items-center space-x-2">
+                    <i class="fa-solid fa-road text-brand-500"></i>
+                    <span>Interactive Action Roadmap</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Implement sequential steps to maximize response percentages</p>
+            </div>
+
+            <!-- Responsive Phased Grid mapping -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+                {% if results.roadmap is defined and results.roadmap %}
+                    {% for phase in results.roadmap %}
+                        <div class="p-6 bg-white/20 dark:bg-slate-900/30 border border-slate-200 dark:border-white/5 rounded-2xl space-y-4 relative flex flex-col justify-between hover:border-brand-500/40 dark:hover:border-brand-500/20 transition-all duration-300">
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-brand-500">
+                                    <span>{{ phase.phase | default('Phase') }}</span>
+                                    <span class="px-2.5 py-1 rounded-lg bg-brand-500/10 text-brand-500 text-[10px]">
+                                        {{ phase.timeframe | default('TBD') }}
+                                    </span>
+                                </div>
+                                <h4 class="text-base font-extrabold text-slate-800 dark:text-slate-100">{{ phase.task | default('Pending Task') }}</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    {{ phase.desc | default('Actionable details not supplied.') }}
+                                </p>
+                            </div>
+                            <div class="pt-4 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-between text-[11px] font-bold text-slate-400">
+                                <span class="flex items-center space-x-1">
+                                    <i class="fa-regular fa-clock"></i>
+                                    <span>{{ phase.timeframe | default('TBD') }}</span>
+                                </span>
+                                <span class="text-brand-500 flex items-center space-x-1 cursor-pointer hover:underline">
+                                    <span>Focus Task</span>
+                                    <i class="fa-solid fa-circle-arrow-right"></i>
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Page Footer -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 text-center text-xs text-slate-500 dark:text-slate-400 space-y-4">
+        <p>CV scoring index algorithm is tuned to emulate major commercial parser rules.</p>
+        <div>
+            <a href="/" class="inline-flex items-center space-x-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition-all shadow-md hover:shadow-brand-500/15">
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+                <span>Upload Another Document</span>
+            </a>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Dark Mode Configuration Settings
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        if (localStorage.getItem('theme') === 'light') {
+            html.classList.remove('dark');
+        } else {
+            html.classList.add('dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
+        // Dynamic Circular Score Animate Settings
+        const targetScore = parseInt({{ results.score | default(0) }}) || 0;
+        const progressRing = document.getElementById('progressRing');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        
+        // SVG Dash Offset parameters
+        const circumference = 314.16;
+        
+        setTimeout(() => {
+            if (progressRing) {
+                // Calculate relative offset representing current evaluation target
+                const offset = circumference - (circumference * targetScore) / 100;
+                progressRing.style.strokeDashoffset = offset;
+            }
+            
+            if (scoreDisplay) {
+                // Numeric increment counter loop
+                let currentVal = 0;
+                const duration = 1200;
+                const stepTime = Math.max(Math.floor(duration / (targetScore || 1)), 10);
+                const counterInterval = setInterval(() => {
+                    if (currentVal < targetScore) {
+                        currentVal++;
+                        scoreDisplay.textContent = currentVal;
+                    } else {
+                        scoreDisplay.textContent = targetScore;
+                        clearInterval(counterInterval);
+                    }
+                }, stepTime);
+            }
+        }, 300);
+
+        // Strength & Compatibility Progress Bars Animation Trigger
+        setTimeout(() => {
+            const techEl = document.getElementById('techSkillsVal');
+            const projEl = document.getElementById('projectsVal');
+            const structEl = document.getElementById('structureVal');
+            const keyEl = document.getElementById('keywordsVal');
+
+            const techScore = techEl ? (parseInt(techEl.textContent) || 0) : 0;
+            const projScore = projEl ? (parseInt(projEl.textContent) || 0) : 0;
+            const structScore = structEl ? (parseInt(structEl.textContent) || 0) : 0;
+            const keyScore = keyEl ? (parseInt(keyEl.textContent) || 0) : 0;
+
+            const techBar = document.getElementById('techSkillsBar');
+            const projBar = document.getElementById('projectsBar');
+            const structBar = document.getElementById('structureBar');
+            const keyBar = document.getElementById('keywordsBar');
+
+            if (techBar) techBar.style.width = techScore + '%';
+            if (projBar) projBar.style.width = projScore + '%';
+            if (structBar) structBar.style.width = structScore + '%';
+            if (keyBar) keyBar.style.width = keyScore + '%';
+
+            // Animate compatibility heat map progress spectrum bars
+            const careerBars = document.querySelectorAll('.career-bar');
+            careerBars.forEach(bar => {
+                const targetWidth = bar.getAttribute('data-width') || '0';
+                bar.style.width = targetWidth + '%';
+            });
+        }, 500);
+
+        // Interactive diagnostics sorting & filtering functions
+        function filterChecks(status) {
+            const items = document.querySelectorAll('.check-item');
+            const filterBtns = ['all', 'pass', 'warning', 'fail'];
+            
+            // Update active state visuals representing filtering action
+            filterBtns.forEach(btnName => {
+                const btn = document.getElementById('btn-' + btnName);
+                if (btn) {
+                    if (btnName === status) {
+                        btn.className = 'px-3 py-1.5 text-xs font-bold rounded-xl transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm';
+                    } else {
+                        btn.className = 'px-3 py-1.5 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:bg-white/30 dark:hover:bg-slate-800';
+                    }
+                }
+            });
+
+            // Apply filter visibilities
+            items.forEach(item => {
+                if (item) {
+                    if (status === 'all' || item.getAttribute('data-status') === status) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

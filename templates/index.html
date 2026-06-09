@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumePilot | ATS Resume Analyzer & Parser</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f7ff',
+                            100: '#ebf0ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes gradient-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.1); opacity: 0.6; }
+        }
+        .blob-animate-1 {
+            animation: gradient-pulse 8s ease-in-out infinite;
+        }
+        .blob-animate-2 {
+            animation: gradient-pulse 12s ease-in-out infinite 2s;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-300 relative overflow-x-hidden font-sans">
+
+    <!-- Ambient Animated Background Blobs -->
+    <div class="absolute top-0 -left-10 w-96 h-96 bg-purple-300 dark:bg-purple-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-40 pointer-events-none blob-animate-1"></div>
+    <div class="absolute top-40 -right-10 w-96 h-96 bg-brand-300 dark:bg-indigo-950/30 rounded-full mix-blend-multiply filter blur-3xl opacity-40 pointer-events-none blob-animate-2"></div>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-50 glass border-b border-white/10 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                    <i class="fa-solid fa-file-invoice text-sm animate-pulse"></i>
+                </div>
+                <span class="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-indigo-500 dark:from-brand-500 dark:to-pink-500">ResumePilot</span>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <!-- Theme Toggle -->
+                <button id="themeToggle" class="p-2.5 rounded-xl hover:bg-white/20 dark:hover:bg-slate-800/50 transition-colors text-slate-600 dark:text-slate-300" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon text-lg dark:hidden"></i>
+                    <i class="fa-solid fa-sun text-lg hidden dark:block"></i>
+                </button>
+                <a href="#upload-section" class="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs transition-all shadow-md shadow-brand-500/10">
+                    <span>Scan Now</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 relative z-10 text-center">
+        <div class="space-y-6 max-w-4xl mx-auto">
+            <span class="px-4 py-1.5 rounded-full text-xs font-bold bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400 uppercase tracking-widest inline-block">
+                Powered by Intelligent Parser Metrics
+            </span>
+            <h1 class="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-none text-slate-900 dark:text-white">
+                AI that reads your resume<br class="hidden sm:inline">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-600 via-indigo-500 to-pink-500">like a recruiter.</span>
+            </h1>
+            <p class="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Most resumes get instantly discarded by automated screening robots. Upload your PDF or DOCX format CV to check your ATS compatibility rating and bridge the technical skills gap immediately.
+            </p>
+        </div>
+    </section>
+
+    <!-- Upload Resume Section -->
+    <section id="upload-section" class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        <!-- Main Interactive Upload Card -->
+        <div class="glass rounded-3xl p-8 border border-white/10 shadow-2xl relative overflow-hidden transition-all duration-300 hover:shadow-brand-500/5 hover:border-brand-500/20">
+            <div id="upload-stage">
+                <div class="text-center pb-6">
+                    <h2 class="text-xl font-extrabold text-slate-800 dark:text-slate-100">Drop your resume file here</h2>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Supports PDF & DOCX configurations up to 10MB</p>
+                </div>
+
+                <!-- Flask Form Structure -->
+                <form action="/" method="POST" enctype="multipart/form-data" id="resumeForm">
+                    <div id="dropzone" class="border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/10 dark:hover:bg-slate-900/30 group">
+                        
+                        <input type="file" name="resume" id="fileInput" class="hidden" accept=".pdf,.docx" required>
+                        
+                        <!-- Drag-and-drop Display Icon -->
+                        <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                        </div>
+
+                        <p class="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-brand-500 transition-colors" id="fileLabel">
+                            Choose document file or drag here
+                        </p>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Ready to start instant diagnostics</p>
+                    </div>
+
+                    <!-- Submit action action -->
+                    <button type="submit" id="submitBtn" class="mt-6 w-full py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-sm tracking-wide transition-all shadow-lg hover:shadow-brand-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center space-x-2" disabled>
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Audit Resume Compatibility</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Loader Segment State -->
+            <div id="loader-stage" class="hidden flex-col items-center justify-center py-12 text-center space-y-6">
+                <div class="relative w-20 h-20">
+                    <div class="absolute inset-0 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-extrabold text-slate-800 dark:text-slate-100">Analyzing Resume Structure</h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">Checking syntax blocks, parsing keyword matches, and building improvement roadmap...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass p-6 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
+                <div class="text-4xl font-black text-brand-600 dark:text-brand-400">95%</div>
+                <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">ATS Detection Accuracy</div>
+            </div>
+            <div class="glass p-6 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
+                <div class="text-4xl font-black text-indigo-500">50+</div>
+                <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">Detailed Resume Checks</div>
+            </div>
+            <div class="glass p-6 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
+                <div class="text-4xl font-black text-pink-500">100+</div>
+                <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">Industry Keywords Tracked</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Cards Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10 space-y-12">
+        <div class="text-center space-y-2">
+            <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white">Built for Strategic Career Growth</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">Get full clarity on how applicant tracking algorithms evaluate your application templates.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="glass p-8 rounded-3xl border border-white/10 shadow-lg relative flex flex-col justify-between hover:scale-[1.02] transition-transform duration-300">
+                <div class="space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">ATS Score Analysis</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Evaluates overall format parameters, layout boundaries, section structures, and core syntax markers to simulate enterprise applicant system scores.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="glass p-8 rounded-3xl border border-white/10 shadow-lg relative flex flex-col justify-between hover:scale-[1.02] transition-transform duration-300">
+                <div class="space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
+                        <i class="fa-solid fa-layer-group text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Skill Gap Analysis</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Tracks missing keywords compared to highly-targeted industry templates. Identify specific tooling frameworks to add to your technical inventory list immediately.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="glass p-8 rounded-3xl border border-white/10 shadow-lg relative flex flex-col justify-between hover:scale-[1.02] transition-transform duration-300">
+                <div class="space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-500 flex items-center justify-center">
+                        <i class="fa-solid fa-map-signs text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Career Roadmap</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Provides sequential step-by-step milestones categorizing short-term and long-term adjustments so you know exactly which improvements to make.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10 space-y-12 bg-white/10 dark:bg-transparent rounded-3xl">
+        <div class="text-center space-y-2">
+            <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white">Simplify Your Application Flow</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">Optimize your resume structures in three intuitive diagnostic phases.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            <!-- Step 1 -->
+            <div class="p-6 relative space-y-3">
+                <div class="text-5xl font-black text-brand-600/20 dark:text-brand-500/10 absolute -top-4 left-4">01</div>
+                <h4 class="text-base font-extrabold text-slate-800 dark:text-slate-100 pt-4">Upload Document</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Drop your standard PDF or Word CV into our secure parsing buffer.
+                </p>
+            </div>
+            <!-- Step 2 -->
+            <div class="p-6 relative space-y-3">
+                <div class="text-5xl font-black text-indigo-600/20 dark:text-indigo-500/10 absolute -top-4 left-4">02</div>
+                <h4 class="text-base font-extrabold text-slate-800 dark:text-slate-100 pt-4">Diagnostics Sweep</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Our scanner parses your text blocks, matching your skill maps and contact headers.
+                </p>
+            </div>
+            <!-- Step 3 -->
+            <div class="p-6 relative space-y-3">
+                <div class="text-5xl font-black text-pink-600/20 dark:text-pink-500/10 absolute -top-4 left-4">03</div>
+                <h4 class="text-base font-extrabold text-slate-800 dark:text-slate-100 pt-4">Action Plan Analysis</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Review missing keywords, structural score indexes, and sequential roadmap milestones.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10 space-y-12">
+        <div class="text-center space-y-2">
+            <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white">Frequently Asked Questions</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Get transparent insights regarding processing metrics.</p>
+        </div>
+
+        <div class="space-y-4">
+            <!-- FAQ 1 -->
+            <div class="glass rounded-2xl border border-white/5 overflow-hidden transition-all duration-300">
+                <button onclick="toggleFAQ(1)" class="w-full p-5 text-left flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-100 hover:bg-white/10 dark:hover:bg-slate-900/10">
+                    <span>What is an ATS (Applicant Tracking System)?</span>
+                    <i id="faq-icon-1" class="fa-solid fa-plus transition-transform duration-300"></i>
+                </button>
+                <div id="faq-ans-1" class="hidden px-5 pb-5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed border-t border-white/5 pt-3">
+                    ATS systems are recruitment tracking platforms used by most organizations to automate high volumes of incoming applications. They search for targeted key frameworks and structures before human screening.
+                </div>
+            </div>
+
+            <!-- FAQ 2 -->
+            <div class="glass rounded-2xl border border-white/5 overflow-hidden transition-all duration-300">
+                <button onclick="toggleFAQ(2)" class="w-full p-5 text-left flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-100 hover:bg-white/10 dark:hover:bg-slate-900/10">
+                    <span>Are my document files kept secure and private?</span>
+                    <i id="faq-icon-2" class="fa-solid fa-plus transition-transform duration-300"></i>
+                </button>
+                <div id="faq-ans-2" class="hidden px-5 pb-5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed border-t border-white/5 pt-3">
+                    Yes, your information privacy is secured. Documents are mapped in memory during extraction runtime, processed locally, and deleted immediately once evaluation payloads are finalized.
+                </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="glass rounded-2xl border border-white/5 overflow-hidden transition-all duration-300">
+                <button onclick="toggleFAQ(3)" class="w-full p-5 text-left flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-100 hover:bg-white/10 dark:hover:bg-slate-900/10">
+                    <span>Does this layout evaluator support PDF formatting checks?</span>
+                    <i id="faq-icon-3" class="fa-solid fa-plus transition-transform duration-300"></i>
+                </button>
+                <div id="faq-ans-3" class="hidden px-5 pb-5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed border-t border-white/5 pt-3">
+                    Yes. PDF structure files, along with standard Microsoft Word documents (.docx), are parsed thoroughly to detect multi-column anomalies, key section breaks, and content metadata.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Page -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 text-center text-xs text-slate-400 dark:text-slate-500 py-8 border-t border-slate-200 dark:border-white/5">
+        <p>Built with ❤️ by Ch. Sai Reddy</p>
+    </footer>
+
+    <!-- Scripts Block -->
+    <script>
+        // Dark Mode Configuration Settings
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        if (localStorage.getItem('theme') === 'light') {
+            html.classList.remove('dark');
+        } else {
+            html.classList.add('dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
+        // Interactive Drag and Drop Zone Configs
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileLabel = document.getElementById('fileLabel');
+        const submitBtn = document.getElementById('submitBtn');
+        const resumeForm = document.getElementById('resumeForm');
+        const uploadStage = document.getElementById('upload-stage');
+        const loaderStage = document.getElementById('loader-stage');
+
+        // Click to choose handler
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        // Drag events listeners
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-brand-500', 'bg-white/20', 'dark:bg-slate-900/50');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-brand-500', 'bg-white/20', 'dark:bg-slate-900/50');
+            }, false);
+        });
+
+        // Drop event trigger handler
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFileDetails(files[0].name);
+            }
+        });
+
+        // File Selection Changed Event
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) {
+                updateFileDetails(fileInput.files[0].name);
+            }
+        });
+
+        // UI update for selected file
+        function updateFileDetails(fileName) {
+            fileLabel.textContent = `Selected: ${fileName}`;
+            fileLabel.classList.add('text-brand-500', 'dark:text-brand-400');
+            submitBtn.removeAttribute('disabled');
+        }
+
+        // Form Submit loading state handler
+        resumeForm.addEventListener('submit', () => {
+            uploadStage.classList.add('hidden');
+            loaderStage.classList.remove('hidden');
+        });
+
+        // Interactive FAQs display Toggle Utility
+        function toggleFAQ(id) {
+            const ans = document.getElementById(`faq-ans-${id}`);
+            const icon = document.getElementById(`faq-icon-${id}`);
+            
+            if (ans.classList.contains('hidden')) {
+                ans.classList.remove('hidden');
+                icon.classList.remove('fa-plus');
+                icon.classList.add('fa-minus');
+            } else {
+                ans.classList.add('hidden');
+                icon.classList.remove('fa-minus');
+                icon.classList.add('fa-plus');
+            }
+        }
+    </script>
+</body>
+</html>
